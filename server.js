@@ -44,14 +44,19 @@ app.get('/ordinals/:address', async (req, res) => {
     const response = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/inscription`, {
       headers: { 'Authorization': `Bearer ${unisatApiKey}` }
     });
+    const responseText = await response.text();
+    console.log(`UniSat API response for ${address}: ${responseText}`);
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch Ordinals: ${response.status} - ${errorText}`);
+      throw new Error(`UniSat API error: ${response.status} - ${responseText}`);
     }
-    const data = await response.json();
-    res.json(data.data.inscriptions);
+    const data = JSON.parse(responseText);
+    if (data.code !== 0) {
+      throw new Error(`UniSat API failed: ${data.msg}`);
+    }
+    res.json(data.data.inscriptions || []);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`Error fetching Ordinals for ${address}: ${error.message}`);
+    res.status(response?.status || 500).json({ error: error.message });
   }
 });
 
