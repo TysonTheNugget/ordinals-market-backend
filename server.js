@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const fetch = require('node-fetch');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -8,18 +9,17 @@ app.use(express.json());
 
 let listings = [];
 let connectedAddresses = {};
+const unisatApiKey = '0c3bf50981aa4abd0dfd0b52315fdf527ab72750a527cb418bd21a649b825397';
 
 app.get('/connect', (req, res) => {
   const nonce = Math.random().toString(36).substring(2);
-  const callbackUrl = `https://${req.get('host')}/callback?nonce=${nonce}`; // Use HTTPS
+  const callbackUrl = `https://${req.get('host')}/callback?nonce=${nonce}`;
   const deeplink = `unisat://request?method=connect&from=MyOrdinalsMarket&nonce=${nonce}&callback=${encodeURIComponent(callbackUrl)}`;
-  console.log('Generated deeplink:', deeplink);
   res.json({ deeplink, nonce });
 });
 
 app.get('/callback', (req, res) => {
   const { nonce, address } = req.query;
-  console.log('Callback received:', { nonce, address });
   if (nonce && address) {
     connectedAddresses[nonce] = address;
     res.send('Connected! Return to the app.');
@@ -30,7 +30,6 @@ app.get('/callback', (req, res) => {
 
 app.get('/address/:nonce', (req, res) => {
   const address = connectedAddresses[req.params.nonce];
-  console.log('Address check for nonce:', req.params.nonce, 'Found:', address);
   if (address) {
     res.json({ address });
   } else {
@@ -38,20 +37,41 @@ app.get('/address/:nonce', (req, res) => {
   }
 });
 
+// Get user's Ordinals
+app.get('/ordinals/:address', async (req, res) => {
+  const { address } = req.params;
+  try {
+    const response = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/inscription`, {
+      headers: { 'Authorization': `Bearer ${unisatApiKey}` }
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch Ordinals: ${response.status} - ${errorText}`);
+    }
+    const data = await response.json();
+    res.json(data.data.inscriptions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List an Ordinal
 app.post('/list', (req, res) => {
-  const { ordinalId, price, seller } = req.body;
-  if (!ordinalId || !price || !seller) {
+  const { inscriptionId, price, seller } = req.body;
+  if (!inscriptionId || !price || !seller) {
     return res.status(400).json({ error: 'Missing data' });
   }
-  const listing = { id: listings.length, ordinalId, price, seller };
+  const listing = { id: listings.length, inscriptionId, price, seller };
   listings.push(listing);
   res.json(listing);
 });
 
+// Get all listings
 app.get('/listings', (req, res) => {
   res.json(listings);
 });
 
+// Buy an Ordinal
 app.post('/buy', (req, res) => {
   const { index, buyer } = req.body;
   const listing = listings[index];
