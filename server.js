@@ -47,16 +47,27 @@ app.get('/ordinals/:address', async (req, res) => {
     const responseText = await response.text();
     console.log(`UniSat API response for ${address}: ${responseText}`);
     if (!response.ok) {
-      throw new Error(`UniSat API error: ${response.status} - ${responseText}`);
+      console.log(`UniSat API status: ${response.status}`);
+      res.status(response.status).json({ error: `UniSat API error: ${response.status} - ${responseText}` });
+      return;
     }
-    const data = JSON.parse(responseText);
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error(`Parse error for ${address}: ${parseError.message}`);
+      res.status(500).json({ error: `Invalid response format from UniSat: ${responseText}` });
+      return;
+    }
     if (data.code !== 0) {
-      throw new Error(`UniSat API failed: ${data.msg}`);
+      console.log(`UniSat API message: ${data.msg}`);
+      res.status(400).json({ error: `UniSat API failed: ${data.msg}` });
+      return;
     }
     res.json(data.data.inscriptions || []);
   } catch (error) {
     console.error(`Error fetching Ordinals for ${address}: ${error.message}`);
-    res.status(response?.status || 500).json({ error: error.message });
+    res.status(500).json({ error: `Internal server error: ${error.message}` });
   }
 });
 
