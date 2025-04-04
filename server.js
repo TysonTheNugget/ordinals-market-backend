@@ -9,7 +9,7 @@ app.use(express.json());
 
 let listings = [];
 let connectedAddresses = {};
-const unisatApiKey = 'bf4358eb9068258ccf5ae9049df5344d04d7f8fd6724b8ddf9185b7640d2006f';
+const unisatApiKey = '0c3bf50981aa4abd0dfd0b52315fdf527ab72750a527cb418bd21a649b825397';
 
 app.get('/connect', (req, res) => {
   const nonce = Math.random().toString(36).substring(2);
@@ -37,19 +37,21 @@ app.get('/address/:nonce', (req, res) => {
   }
 });
 
-// Get user's Ordinals (Mainnet) - Corrected endpoint
+// Get user's Ordinals with pagination
 app.get('/ordinals/:address', async (req, res) => {
   const { address } = req.params;
+  const cursor = parseInt(req.query.cursor) || 0; // Pagination start
+  const size = parseInt(req.query.size) || 20; // Items per page
   try {
-    const response = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/inscription-data`, {
+    const response = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/inscription-data?cursor=${cursor}&size=${size}`, {
       headers: { 'Authorization': `Bearer ${unisatApiKey}` }
     });
     const responseText = await response.text();
-    console.log(`UniSat API response for ${address}: ${responseText}`);
+    console.log(`UniSat API response for ${address} (cursor=${cursor}, size=${size}): ${responseText}`);
     if (!response.ok) {
       console.log(`UniSat API status: ${response.status}`);
       if (response.status === 404) {
-        res.json([]); // No inscriptions, return empty array
+        res.json([]);
         return;
       }
       res.status(response.status).json({ error: `UniSat API error: ${response.status} - ${responseText}` });
@@ -61,7 +63,10 @@ app.get('/ordinals/:address', async (req, res) => {
       res.status(400).json({ error: `UniSat API failed: ${data.msg}` });
       return;
     }
-    res.json(data.data.inscriptions || []);
+    res.json({
+      inscriptions: data.data.utxos || [],
+      total: data.data.total || 0
+    });
   } catch (error) {
     console.error(`Error fetching Ordinals for ${address}: ${error.message}`);
     res.status(500).json({ error: `Internal server error: ${error.message}` });
