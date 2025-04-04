@@ -13,11 +13,13 @@ app.get('/connect', (req, res) => {
   const nonce = Math.random().toString(36).substring(2);
   const callbackUrl = `${req.protocol}://${req.get('host')}/callback?nonce=${nonce}`;
   const deeplink = `unisat://request?method=connect&from=MyOrdinalsMarket&nonce=${nonce}&callback=${encodeURIComponent(callbackUrl)}`;
+  console.log('Generated deeplink:', deeplink); // Debug
   res.json({ deeplink, nonce });
 });
 
 app.get('/callback', (req, res) => {
   const { nonce, address } = req.query;
+  console.log('Callback received:', { nonce, address }); // Debug
   if (nonce && address) {
     connectedAddresses[nonce] = address;
     res.send('Connected! Return to the app.');
@@ -28,6 +30,7 @@ app.get('/callback', (req, res) => {
 
 app.get('/address/:nonce', (req, res) => {
   const address = connectedAddresses[req.params.nonce];
+  console.log('Address check for nonce:', req.params.nonce, 'Found:', address); // Debug
   if (address) {
     res.json({ address });
   } else {
