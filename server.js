@@ -9,7 +9,7 @@ app.use(express.json());
 
 let listings = [];
 let connectedAddresses = {};
-const unisatApiKey = '0c3bf50981aa4abd0dfd0b52315fdf527ab72750a527cb418bd21a649b825397';
+const unisatApiKey = 'bf4358eb9068258ccf5ae9049df5344d04d7f8fd6724b8ddf9185b7640d2006f';
 
 app.get('/connect', (req, res) => {
   const nonce = Math.random().toString(36).substring(2);
