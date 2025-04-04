@@ -37,7 +37,7 @@ app.get('/address/:nonce', (req, res) => {
   }
 });
 
-// Get user's Ordinals
+// Get user's Ordinals (Mainnet)
 app.get('/ordinals/:address', async (req, res) => {
   const { address } = req.params;
   try {
