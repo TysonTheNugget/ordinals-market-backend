@@ -37,28 +37,25 @@ app.get('/address/:nonce', (req, res) => {
   }
 });
 
-// Get user's Ordinals (Mainnet)
+// Get user's Ordinals (Mainnet) - Corrected endpoint
 app.get('/ordinals/:address', async (req, res) => {
   const { address } = req.params;
   try {
-    const response = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/inscription`, {
+    const response = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/inscription-data`, {
       headers: { 'Authorization': `Bearer ${unisatApiKey}` }
     });
     const responseText = await response.text();
     console.log(`UniSat API response for ${address}: ${responseText}`);
     if (!response.ok) {
       console.log(`UniSat API status: ${response.status}`);
+      if (response.status === 404) {
+        res.json([]); // No inscriptions, return empty array
+        return;
+      }
       res.status(response.status).json({ error: `UniSat API error: ${response.status} - ${responseText}` });
       return;
     }
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error(`Parse error for ${address}: ${parseError.message}`);
-      res.status(500).json({ error: `Invalid response format from UniSat: ${responseText}` });
-      return;
-    }
+    const data = JSON.parse(responseText);
     if (data.code !== 0) {
       console.log(`UniSat API message: ${data.msg}`);
       res.status(400).json({ error: `UniSat API failed: ${data.msg}` });
